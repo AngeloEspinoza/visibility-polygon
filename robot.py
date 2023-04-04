@@ -7,9 +7,14 @@ class Robot():
 
 	Attributes
 	----------
-
+	start : tuple
+		Initial position of the tree in X and Y respectively.
+	radius : int
+		End position of the tree in X and Y respectively.
+	map_dimensions : tuple
+		Map width and height in pixels.
 	"""
-	def __init__(self, initial_position, robot_radius):
+	def __init__(self, start, radius, vertices):
 		# Colors 
 		self.WHITE = (255, 255, 255)
 		self.BLACK = (0, 0, 0)
@@ -21,8 +26,11 @@ class Robot():
 		self.YELLOW = (255, 255, 0)
 
 		# Robot settings
-		self.initial_position = initial_position
-		self.robot_radius = robot_radius
+		self.start = start
+		self.radius = radius
+		self.vertices = vertices
+		self.end_points = []
+		self.visibility_points = []
 
 	def draw(self, map):
 		"""Draws the robot on map.
@@ -32,41 +40,7 @@ class Robot():
 		map : pygame.Surface
 			The where the robot will be drawn.
 		"""
-		pygame.draw.circle(surface=map, color=self.BLACK,
-		 	center=self.initial_position, radius=self.robot_radius)
-		
-		pygame.draw.circle(surface=map, color=self.GREEN,
-		 	center=(100, 100), radius=self.robot_radius)
-
-	def interpolation(self, p1, p2):
-		"""Interpolates a line.
-
-		Given an ordered pair of initial point p1 and an 
-		end point p2, it computes points between p1 and p2. 
-
-		Parameters
-		----------
-		p1 : tuple 
-			Initial Point.
-		p2 : tuple 
-			End Point.
-
-		Returns
-		-------
-		list
-			Coordinates of the points resulted by the interpolation.
-		"""
-		p11, p12 = p1[0], p1[1]
-		p21, p22 = p2[0], p2[1]
-		coordinates = []
-
-		for i in range(0, 401):
-			u = i / 400
-			x = p11 * u + p21 * (1 - u)
-			y = p12 * u + p22 * (1 - u)
-			coordinates.append((x, y))
-
-		return coordinates
+		pygame.draw.circle(surface=map, color=self.BLACK, center=self.start, radius=self.radius)
 
 	def euclidean_distance(self, p1, p2):
 		"""Euclidean distance between two points.
@@ -85,7 +59,7 @@ class Robot():
 		"""
 		return int(math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2))
 
-	def get_line_angle(self, p1, p2):
+	def get_ray_angle(self, p1, p2):
 		"""Gets the angle of a given line.
 
 		Given the start point and the point of the line, it 
@@ -111,88 +85,122 @@ class Robot():
 
 		return rads
 
-	def draw_visibility_polygon(self, point_cloud, map):
-		"""Draws the visibility polygon given a set of points."""
-		ordered_points = []
-		for point in point_cloud:
-			angle = self.get_line_angle(self.initial_position, point)
-			ordered_points.append((angle, point))
-		
-		ordered_points.sort()
-		ordered_points = [point[1] for point in ordered_points]
-		pygame.draw.polygon(surface=map, color=self.YELLOW,
-			points=ordered_points)
-		self.draw(map=map)
+	def intersect(self, obstacles, point1, point2):
+		"""Checks the intersection of two lines.
 
-
-	def draw_rays(self, vertices, obstacles, map, init):
-		"""Draws a raytracing from the robot's position.
+		Given a set of lines, and the initial and end point of a line, it 
+		computes the intersection between the line and the set of lines.
 
 		Parameters
 		----------
-		vertices : tuple
-			Vertices of the map corners.
-		obstacles : pygame.Rect 
-			Rectangle obstacle.
-		map : pygame.Surface
-			Environment to draw on.
+		obstacles : list
+			List of lines to be checked for intersection.
+		point1 : tuple
+			Coordinate of the start of the line.
+		point2 : tuple
+			Coordinate of the end of the line.
+
+		Returns
+		-------
+		tuple
+			Coordinate where the line intersects.
+		"""
+		best_distance = math.inf
+		end_point = point2
+
+		for point3, point4 in obstacles:
+			# Compute distance from a point to a line
+			distance = (point2[0]-point1[0]) * (point4[1]-point3[1]) + \
+				(point2[1]-point1[1]) * (point3[0]-point4[0]) 
+
+			if distance != 0:
+				t = ((point3[0]-point1[0]) * (point4[1]-point3[1]) + \
+					(point3[1]-point1[1]) * (point3[0]-point4[0])) / distance
+				u = ((point3[0]-point1[0]) * (point2[1]-point1[1]) + \
+					(point3[1]-point1[1]) * (point1[0]-point2[0])) / distance
+	            
+				if 0 <= t <= 1 and 0 <= u <= 1:
+					vx, vy = (point2[0]-point1[0]) * t, \
+						(point2[1]-point1[1]) * t
+					dist = vx*vx + vy*vy
+
+					if dist < best_distance:
+						px, py = round(point4[0] * u + point3[0] * (1-u)), \
+							round(point4[1] * u + point3[1] * (1-u))
+						best_distance = dist
+						end_point = (px, py)
+
+		return end_point
+
+	def get_offset_end_points(self, init):
+		""" Initializes the rays by getting the two angle offsets.
+
+		Given the robot's position, it will cast rays with an angle and distance
+		offset.
+		
+		Parameters
+		----------
 		init : tuple
-			Initial robot's position.
+			Coordinate of the robot's position from where the rays will
+			be casted from.
 
 		Returns
 		-------
 		None
 		"""
-		left_distances = []
-		right_distances = []
-		all_distances = []
-		offset = 0.01
+		offset = 0.013
 		dst_offset = 500
-		visibility_points = []
 
-		for vertice in vertices:
-			angle = self.get_line_angle(init, vertice)
+		for vertice in self.vertices:
+			angle = self.get_ray_angle(init, vertice)
 			angle_left = angle - offset
-			angle_right = angle + offset
 			angle_left %= math.pi * 2
+			angle_right = angle + offset
 			angle_right %= math.pi * 2
 
 			dst = self.euclidean_distance(init, vertice)
-			left_offset = tuple([init[0] + (dst_offset + dst) 
-				* math.cos(angle_left), init[1] + (dst_offset + dst)
-				* math.sin(angle_left)])
-			right_offset = tuple([init[0] + (dst_offset + dst) 
-				* math.cos(angle_right), init[1] + (dst_offset + dst)
-				* math.sin(angle_right)])
+			left_offset = tuple([init[0] + (dst_offset + dst) * math.cos(angle_left), init[1] +
+				(dst_offset + dst) * math.sin(angle_left)])
+			right_offset = tuple([init[0] + (dst_offset + dst) * math.cos(angle_right), init[1] +
+				(dst_offset + dst) * math.sin(angle_right)])
 
-			# Left and right rays interpolation
-			left_interpolation = self.interpolation(self.initial_position, left_offset)
-			right_interpolation = self.interpolation(self.initial_position, right_offset)
+			self.end_points.append(left_offset)
+			self.end_points.append(right_offset)
 
-			for left, right in zip(left_interpolation, right_interpolation):
-				for rect in obstacles:
-					left_ray_collision = rect.collidepoint(left)
-					right_ray_collision = rect.collidepoint(right)
+	def generate_visibility_points(self):
+		"""Initializes the rays by applying an algorithm."""
 
-					if left_ray_collision:
-						left_distance = self.euclidean_distance(init, left)
-						left_distances.append((left_distance, left))
-					
-					if right_ray_collision:
-						right_distance = self.euclidean_distance(init, right)
-						right_distances.append((right_distance, right))
+		# List of lines that represent the boundaries of the environment
+		obstacles = [(self.vertices[i], self.vertices[i+1]) for i in range(len(self.vertices)-1)]
 
-			try:
-				left_min_distance = min(left_distances)[1]
-				right_min_distance = min(right_distances)[1]
-				visibility_points.append(left_min_distance)
-				visibility_points.append(right_min_distance)
+		for point in self.end_points:
+			intersection_point = self.intersect(obstacles=obstacles,
+				point1=self.start, point2=point)
+			self.visibility_points.append(intersection_point)
 
+	def initialize_rays(self, init):
+		"""Gets the rays initiliazed."""
+		self.get_offset_end_points(init=init)
+		self.generate_visibility_points()
 
-				left_distances = []
-				right_distances = []
+	def draw_cloud_points(self, map):
+		"""Draws the cloud points reflected in the walls of the obstacles."""
+		for point in self.visibility_points:
+			pygame.draw.circle(map, self.RED, point, 3)
 
-			except Exception as e:
-				pass
-
-		return visibility_points
+	def draw_rays(self, map):
+		"""Draws a raytracing from the robot's position."""
+		for point in self.visibility_points:
+			pygame.draw.line(map, self.RED, self.start, point)
+	
+	def draw_visibility_polygon(self, map):
+		"""Draws the visibility polygon given a set of points."""
+		ordered_points = []
+		for point in self.visibility_points:
+			angle = self.get_ray_angle(self.start, point)
+			ordered_points.append((angle, point))
+		
+		ordered_points.sort()
+		ordered_points = [point[1] for point in ordered_points]
+		pygame.draw.polygon(surface=map, color=self.YELLOW, points=ordered_points)
+		self.draw(map=map)
