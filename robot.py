@@ -11,8 +11,8 @@ class Robot():
 		Initial position of the tree in X and Y respectively.
 	radius : int
 		End position of the tree in X and Y respectively.
-	map_dimensions : tuple
-		Map width and height in pixels.
+	vertices : list
+		List of the vertices of the map.
 	"""
 	def __init__(self, start, radius, vertices):
 		# Colors 
@@ -31,16 +31,6 @@ class Robot():
 		self.vertices = vertices
 		self.end_points = []
 		self.visibility_points = []
-
-	def draw(self, map):
-		"""Draws the robot on map.
-		
-		Parameters
-		----------
-		map : pygame.Surface
-			The where the robot will be drawn.
-		"""
-		pygame.draw.circle(surface=map, color=self.BLACK, center=self.start, radius=self.radius)
 
 	def euclidean_distance(self, p1, p2):
 		"""Euclidean distance between two points.
@@ -133,7 +123,7 @@ class Robot():
 		return end_point
 
 	def get_offset_end_points(self, init):
-		""" Initializes the rays by getting the two angle offsets.
+		"""Initializes the rays by getting the two angle offsets.
 
 		Given the robot's position, it will cast rays with an angle and distance
 		offset.
@@ -149,7 +139,7 @@ class Robot():
 		None
 		"""
 		offset = 0.013
-		dst_offset = 500
+		ray_length = 1000
 
 		for vertice in self.vertices:
 			angle = self.get_ray_angle(init, vertice)
@@ -159,13 +149,14 @@ class Robot():
 			angle_right %= math.pi * 2
 
 			dst = self.euclidean_distance(init, vertice)
-			left_offset = tuple([init[0] + (dst_offset + dst) * math.cos(angle_left), init[1] +
-				(dst_offset + dst) * math.sin(angle_left)])
-			right_offset = tuple([init[0] + (dst_offset + dst) * math.cos(angle_right), init[1] +
-				(dst_offset + dst) * math.sin(angle_right)])
+			left_offset = tuple([init[0] + (ray_length + dst) * math.cos(angle_left), init[1] +
+				(ray_length + dst) * math.sin(angle_left)])
+			right_offset = tuple([init[0] + (ray_length + dst) * math.cos(angle_right), init[1] +
+				(ray_length + dst) * math.sin(angle_right)])
 
 			self.end_points.append(left_offset)
 			self.end_points.append(right_offset)
+			self.end_points.append(vertice)
 
 	def generate_visibility_points(self):
 		"""Initializes the rays by applying an algorithm."""
@@ -174,14 +165,18 @@ class Robot():
 		obstacles = [(self.vertices[i], self.vertices[i+1]) for i in range(len(self.vertices)-1)]
 
 		for point in self.end_points:
-			intersection_point = self.intersect(obstacles=obstacles,
-				point1=self.start, point2=point)
+			intersection_point = self.intersect(obstacles=obstacles, point1=self.start,
+				point2=point)
 			self.visibility_points.append(intersection_point)
 
-	def initialize_rays(self, init):
+	def cast_rays(self, init):
 		"""Gets the rays initiliazed."""
 		self.get_offset_end_points(init=init)
 		self.generate_visibility_points()
+
+	def draw(self, map):
+		"""Draws the robot on map."""
+		pygame.draw.circle(surface=map, color=self.BLACK, center=self.start, radius=self.radius)
 
 	def draw_cloud_points(self, map):
 		"""Draws the cloud points reflected in the walls of the obstacles."""
@@ -204,3 +199,5 @@ class Robot():
 		ordered_points = [point[1] for point in ordered_points]
 		pygame.draw.polygon(surface=map, color=self.YELLOW, points=ordered_points)
 		self.draw(map=map)
+		self.visibility_points = []
+		self.end_points = []

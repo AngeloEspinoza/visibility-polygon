@@ -6,7 +6,7 @@ class Environment():
 
 	Attributes
 	----------
-	dimensions : tuple
+	map_dimensions : tuple
 		The X and Y window dimensions.
 	"""
 	
@@ -49,6 +49,7 @@ class Environment():
 		list
 			A collection of the vertices that compose the environment map.			
 		"""
+		self.map.fill(self.WHITE)
 		pygame.draw.polygon(surface=self.map, color=self.GRAY, points=self.vertices)
 		self.draw_walls()
 
