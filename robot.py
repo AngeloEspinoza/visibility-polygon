@@ -27,10 +27,12 @@ class Robot():
 
 		# Robot settings
 		self.start = start
+		self.position = self.start
 		self.radius = radius
 		self.vertices = vertices
 		self.end_points = []
 		self.visibility_points = []
+		self.previous_position = None
 
 	def euclidean_distance(self, p1, p2):
 		"""Euclidean distance between two points.
@@ -160,7 +162,6 @@ class Robot():
 
 	def generate_visibility_points(self):
 		"""Initializes the rays by applying an algorithm."""
-
 		# List of lines that represent the boundaries of the environment
 		obstacles = [(self.vertices[i], self.vertices[i+1]) for i in range(len(self.vertices)-1)]
 

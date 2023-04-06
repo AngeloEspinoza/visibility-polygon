@@ -36,19 +36,11 @@ class Environment():
 		 (70, 300), (70, 410), (150, 410), (150, 380), (220, 380), (220, 480),
 		 (0, 480), (0, 0)]
 
+	def get_position_color(self, position):
+		return self.map.get_at(position)[:3]
+
 	def make_map(self):
-		"""
-		Makes the walls of the map.
-		
-		Parameters
-		----------
-		None
-		
-		Returns
-		-------
-		list
-			A collection of the vertices that compose the environment map.			
-		"""
+		"""Makes the walls of the map."""
 		self.map.fill(self.WHITE)
 		pygame.draw.polygon(surface=self.map, color=self.GRAY, points=self.vertices)
 		self.draw_walls()

@@ -20,29 +20,47 @@ def main():
 
 	while run:
 		keys = pygame.key.get_pressed()
+		
 		clock.tick(environment_.FPS) 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				run = False
 
-		# Change the robot's position with the keyboard arrows
 		if keys[pygame.K_LEFT]:
-			robot_.start[0] -= 3
-		if keys[pygame.K_RIGHT]:
-			robot_.start[0] += 3
-		if keys[pygame.K_UP]:
-			robot_.start[1] -= 3
-		if keys[pygame.K_DOWN]:
-			robot_.start[1] += 3
+			robot_.position[0] -= 3
+			surface_color = environment_.get_position_color(robot_.position)
+
+			if surface_color != robot_.GRAY:
+				robot_.position[0] += 3
+		
+		elif keys[pygame.K_RIGHT]:
+			robot_.position[0] += 3
+			surface_color = environment_.get_position_color(robot_.position)
+
+			if surface_color != robot_.GRAY:
+				robot_.position[0] -= 3
+		
+		elif keys[pygame.K_UP]:
+			robot_.position[1] -= 3
+			surface_color = environment_.get_position_color(robot_.position)
+
+			if surface_color != robot_.GRAY:
+				robot_.position[1] += 3
+
+		elif keys[pygame.K_DOWN]:
+			robot_.position[1] += 3
+			surface_color = environment_.get_position_color(robot_.position)
+
+			if surface_color != robot_.GRAY:
+				robot_.position[1] -= 3
 
 		# Display the robot, cast the rays, and display the visibility polygon
 		robot_.draw(map=environment_.map)
 		robot_.cast_rays(init=robot_.start)
 		robot_.draw_visibility_polygon(map=environment_.map)
-		
+
 		# Update the frame, and restart the map again to delete previous visibility polygons
 		pygame.display.update()	
-		environment_.draw_walls()
 		environment_.make_map()
 
 	pygame.quit()
