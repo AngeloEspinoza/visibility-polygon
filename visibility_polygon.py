@@ -28,6 +28,9 @@ def main():
 	clock = pygame.time.Clock()
 	vertices = environment_.make_map()
 
+	if environment_.get_position_color(robot_.start) == environment_.WHITE:
+		raise Exception('Invalid start, robot out of bounds. Try again')
+
 	while run:
 		keys = pygame.key.get_pressed()
 		
