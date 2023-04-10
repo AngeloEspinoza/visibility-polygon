@@ -140,7 +140,7 @@ class Robot():
 		-------
 		None
 		"""
-		offset = 0.013
+		offset = 0.01
 		ray_length = 1000
 
 		for vertice in self.vertices:
@@ -175,6 +175,10 @@ class Robot():
 		self.get_offset_end_points(init=init)
 		self.generate_visibility_points()
 
+	def refresh_points(self):
+		self.visibility_points = []
+		self.end_points = []
+
 	def draw(self, map):
 		"""Draws the robot on map."""
 		pygame.draw.circle(surface=map, color=self.BLACK, center=self.start, radius=self.radius)
@@ -188,6 +192,9 @@ class Robot():
 		"""Draws a raytracing from the robot's position."""
 		for point in self.visibility_points:
 			pygame.draw.line(map, self.RED, self.start, point)
+
+		self.draw(map=map)
+		self.refresh_points()
 	
 	def draw_visibility_polygon(self, map):
 		"""Draws the visibility polygon given a set of points."""
@@ -200,5 +207,4 @@ class Robot():
 		ordered_points = [point[1] for point in ordered_points]
 		pygame.draw.polygon(surface=map, color=self.YELLOW, points=ordered_points)
 		self.draw(map=map)
-		self.visibility_points = []
-		self.end_points = []
+		self.refresh_points()

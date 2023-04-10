@@ -1,7 +1,17 @@
 import pygame
 import environment
 import robot
+import argparse
 import sys
+
+# Command line arguments
+parser = argparse.ArgumentParser(description='Implements the visibility polygon algorithm for a \
+	point.')
+parser.add_argument('-st', '--start', nargs='+', type=int, metavar='', required=False,
+	default=[300, 250], help='Initial position of the robot in X and Y, respectively')
+parser.add_argument('-sr', '--show_rays', type=bool, action=argparse.BooleanOptionalAction, 
+	metavar='', required=False, help='Show only the casted rays on screen')
+args = parser.parse_args()
 
 # Initialization 
 pygame.init()
@@ -11,7 +21,7 @@ MAP_DIMENSIONS = 642, 482
 
 # Instantiating the environment and the robot
 environment_ = environment.Environment(map_dimensions=MAP_DIMENSIONS)
-robot_ = robot.Robot(start=[300, 250], radius=5, vertices=environment_.vertices)
+robot_ = robot.Robot(start=args.start, radius=5, vertices=environment_.vertices)
 
 def main():
 	run = True
@@ -57,7 +67,11 @@ def main():
 		# Display the robot, cast the rays, and display the visibility polygon
 		robot_.draw(map=environment_.map)
 		robot_.cast_rays(init=robot_.start)
-		robot_.draw_visibility_polygon(map=environment_.map)
+
+		if args.show_rays:
+			robot_.draw_rays(map=environment_.map)
+		elif not args.show_rays:
+			robot_.draw_visibility_polygon(map=environment_.map)
 
 		# Update the frame, and restart the map again to delete previous visibility polygons
 		pygame.display.update()	
